@@ -15,4 +15,8 @@ MonoBehaviour:
   characterImg: {fileID: 21300000, guid: 1dfd6f36fd1f222479d5c30cd81ba0e5, type: 3}
   cardImg: {fileID: 21300000, guid: af0d3d029e2431c42a2fcf82f280c20e, type: 3}
   name: West
+  health: 250
+  attack: 75
+  armor: 50
   rarity: 0
+  cardCount: 0

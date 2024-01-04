@@ -1,9 +1,13 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 using TMPro;
+using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
+
+public enum GachaType { Guaranteed, SoftPity, Rateup }
 
 public class GachaManager : MonoBehaviour
 {
@@ -12,13 +16,13 @@ public class GachaManager : MonoBehaviour
 
     [SerializeField] CardInfo[] rewards;
 
-    [SerializeField] Transform parent, pos;
+    [SerializeField] Transform parent, pos, finishLocation;
 
     [SerializeField] GameObject characterCardGo;
 
-    GameObject characterCard;
+    public List<Cards> card;
 
-    Cards card;
+    [SerializeField] List<Transform> parents;
 
     // Gacha System Rate up
     [SerializeField] CardInfo[] rateUpRewards;
@@ -31,6 +35,8 @@ public class GachaManager : MonoBehaviour
     // Gacha System Guaranteed
     int guaranteedPull = 10;
     [SerializeField] TextMeshProUGUI pullLeft;
+
+    bool completeTenPull = false;
 
     CardInfo cardInfo;
 
@@ -45,57 +51,63 @@ public class GachaManager : MonoBehaviour
         SetPullText();
     }
 
-    public void Gacha()
+    private void LateUpdate()
     {
-        GuaranteedGachaPull();
-    }
-
-#region SoftPity
-    void GachasoftPity()
-    {
-        int rnd = UnityEngine.Random.Range(1, 101);
-        for (int i = 0; i < gacha.Length; i++)
+        if (completeTenPull)
         {
-            if (rnd <= gacha[i].rate)
+            completeTenPull = false;
+
+            for (int i = 0; i < card.Count; i++)
             {
-                Debug.Log(gacha[i].rarity);
-                if (gacha[i].rarity != Rarity.Legend)
-                {
-                    AddRate();
-                }
-                else
-                {
-                    RefreshGachaRate();
-                }
-                cardInfo = Reward(gacha[i].rarity);
-                break;
+                card[i].MoveToFinishLocation();
             }
-        }
-
-        SpawnNewCard(cardInfo);
-    }
-
-    void RefreshGachaRate()
-    {
-        Debug.Log("Refresh Gacha Rate");
-        for (int i = 0; i < gacha.Length; i++)
-        {
-            gacha[i].rate = normalRate[i];
+            card.Clear();
         }
     }
 
-    void AddRate()
+    void GachaOneTime(GachaType type)
     {
-        Debug.Log("Add Rate");
-        for (int i = 0; i < gacha.Length; i++)
+
+        if (Data.isCanGacha)
         {
-            if (gacha[i].rate != 100)
+            Data.isCanGacha = false;
+            switch (type)
             {
-                gacha[i].rate += legendSoftPity;
+                case GachaType.Guaranteed:
+                    GuaranteedGachaPull();
+                    break;
+                case GachaType.SoftPity:
+                    GachasoftPity();
+                    break;
+                case GachaType.Rateup:
+                    GachaRateup();
+                    break;
             }
+
+            SpawnNewCard(cardInfo).MoveToLocation(parent, finishLocation.position, true);
         }
     }
-#endregion
+
+    void GachaTenTime(GachaType type)
+    {
+        if (Data.isCanGacha)
+        {
+            Data.isCanGacha = false;
+            StartCoroutine(GachaDelayForMultiple(type));
+        }
+    }
+
+    #region Guaranteed
+    public void PullOneTimeGuaranteed()
+    {
+        GachaOneTime(GachaType.Guaranteed);
+
+    }
+
+    public void PullTenTimeGuaranteed()
+    {
+        GachaTenTime(GachaType.Guaranteed);
+    }
 
     void GuaranteedGachaPull()
     {
@@ -119,23 +131,26 @@ public class GachaManager : MonoBehaviour
                     cardInfo = Reward(Rarity.Legend);
                     break;
                 }
-                /*card.cardInfo = Reward(gacha[i].rarity);*/
                 cardInfo = Reward(gacha[i].rarity);
                 break;
             }
         }
-        SpawnNewCard(cardInfo);
     }
+    #endregion
 
-    void SetPullText()
+    #region SoftPity
+    public void PullOneTimeSoftPity()
     {
-        pullLeft.text = "Guaranteed " + guaranteedPull + " Pulls";
+        GachaOneTime(GachaType.SoftPity);
+
     }
 
-    /// <summary>
-    /// Untuk Gacha normal dan rate up gacha
-    /// </summary>
-    void NormalGacha()
+    public void PullTenTimeSoftPity()
+    {
+        GachaTenTime(GachaType.SoftPity);
+    }
+
+    void GachasoftPity()
     {
         int rnd = UnityEngine.Random.Range(1, 101);
         for (int i = 0; i < gacha.Length; i++)
@@ -143,28 +158,146 @@ public class GachaManager : MonoBehaviour
             if (rnd <= gacha[i].rate)
             {
                 Debug.Log(gacha[i].rarity);
-                /*card.cardInfo = Reward(gacha[i].rarity);*/
-                cardInfo = RewardupRates(gacha[i].rarity);
+                if (gacha[i].rarity != Rarity.Legend)
+                {
+                    AddRate();
+                }
+                else
+                {
+                    RefreshGachaRate();
+                }
+                cardInfo = Reward(gacha[i].rarity);
                 break;
             }
         }
+    }
 
-        SpawnNewCard(cardInfo);
+    void RefreshGachaRate()
+    {
+        for (int i = 0; i < gacha.Length; i++)
+        {
+            gacha[i].rate = normalRate[i];
+        }
+    }
+
+    void AddRate()
+    {
+        for (int i = 0; i < gacha.Length; i++)
+        {
+            if (gacha[i].rate != 100)
+            {
+                gacha[i].rate += legendSoftPity;
+            }
+        }
+    }
+    #endregion
+
+    #region Rate up reward
+    /// <summary>
+    /// Untuk rate up reward
+    /// </summary>
+    /// <param name="rarity"></param>
+    /// <returns></returns>
+    public void PullOneTimeRateup()
+    {
+        GachaOneTime(GachaType.Rateup);
+
+    }
+
+    public void PullTenTimeRateup()
+    {
+        GachaTenTime(GachaType.Rateup);
+    }
+
+    void GachaRateup()
+    {
+        int rnd = UnityEngine.Random.Range(1, 101);
+        for (int i = 0; i < gacha.Length; i++)
+        {
+            if (rnd <= gacha[i].rate)
+            {
+                CardInfo[] rateUpReward = Array.FindAll(rateUpRewards, rr => rr.rarity == gacha[i].rarity);
+                if (rateUpReward.Length > 0)
+                {
+                    int index = UnityEngine.Random.Range(1, 11);
+                    if (index <= rateUpRate)
+                    {
+                        index = UnityEngine.Random.Range(0, rateUpReward.Length);
+                        cardInfo = rateUpReward[index];
+                        break;
+                    }
+                }
+                cardInfo = Reward(gacha[i].rarity);
+                break;
+            }
+        }
+    }
+    #endregion
+
+    IEnumerator GachaDelayForMultiple(GachaType type)
+    {
+        int count = 0;
+        while (count < 10)
+        {
+            switch (type)
+            {
+                case GachaType.Guaranteed:
+                    GuaranteedGachaPull();
+                    break;
+                case GachaType.SoftPity:
+                    GachasoftPity();
+                    break;
+                case GachaType.Rateup:
+                    GachaRateup();
+                    break;
+                default:
+                    break;
+            }
+
+            Cards _card = SpawnNewCard(cardInfo);
+            _card.MoveToLocation(parents[count], finishLocation.position, false);
+            card.Add(_card);
+
+            yield return new WaitForSeconds(0.5f);
+
+            if (count == 9)
+            {
+                int index = 0;
+                while (index < card.Count)
+                {
+                    card[index].PlayAnimation();
+                    index++;
+                    if (index >= card.Count)
+                    {
+                        completeTenPull = true;
+                    }
+                    yield return new WaitForSeconds(0.6f);
+                }
+            }
+            count += 1;
+        }
+    }
+
+    void SetPullText()
+    {
+        if (pullLeft != null)
+        {
+            pullLeft.text = "Guaranteed " + guaranteedPull + " Pulls";
+        }
     }
 
     /// <summary>
     /// Untuk spawn kartu baru
     /// </summary>
-    void SpawnNewCard(CardInfo newCardinfo)
+    Cards SpawnNewCard(CardInfo newCardinfo)
     {
-        if (characterCard == null)
-        {
-            characterCard = Instantiate(characterCardGo, pos.position, Quaternion.identity) as GameObject;
-            characterCard.transform.SetParent(parent);
-            characterCard.transform.localScale = Vector3.one;
-            card = characterCard.GetComponent<Cards>();
-            card.cardInfo = newCardinfo;
-        }
+        GameObject characterCard = Instantiate(characterCardGo, pos.position, Quaternion.identity, pos) as GameObject;
+        characterCard.transform.localScale = Vector3.one;
+
+        Cards newCard = characterCard.GetComponent<Cards>();
+        newCard.SetCardInfo(newCardinfo);
+
+        return newCard;
     }
 
     // mendapatkan value rarity
@@ -182,52 +315,9 @@ public class GachaManager : MonoBehaviour
     /// <returns></returns>
     CardInfo Reward(Rarity rarity)
     {
-        /*CardInfo[] reward = Array.FindAll();*/
-        CardInfo reward = Array.Find(rewards, r => r.rarity == rarity);
+        CardInfo[] reward = Array.FindAll(rewards, r => r.rarity == rarity);
+        int rnd = UnityEngine.Random.Range(0, reward.Length);
 
-        return reward;
-    }
-
-    /// <summary>
-    /// Untuk rate up reward
-    /// </summary>
-    /// <param name="rarity"></param>
-    /// <returns></returns>
-    CardInfo RewardupRates(Rarity rarity)
-    {
-        CardInfo reward = Array.Find(rewards, r => r.rarity == rarity);
-
-        CardInfo[] rateUpReward = Array.FindAll(rateUpRewards, rr => rr.rarity == rarity);
-
-        if (rateUpReward.Length > 0)
-        {
-            int rnd = UnityEngine.Random.Range(1, 11);
-            if (rnd <= rateUpRate)
-            {
-                Debug.Log("Rate Up Reward");
-                rnd = UnityEngine.Random.Range(0, rateUpReward.Length);
-                return rateUpReward[rnd];
-            }
-        }
-
-        return reward;
-    }
-}
-
-[CustomEditor(typeof(GachaManager)), CanEditMultipleObjects]
-public class GachaEditor : Editor
-{
-    public int common, uncommon, rare, Epic, Legend;
-
-    public override void OnInspectorGUI()
-    {
-        base.OnInspectorGUI();
-        EditorGUILayout.Space();
-
-        GachaManager gm = (GachaManager)target;
-
-        common = EditorGUILayout.IntField("Common", (gm.Rates(Rarity.Common) - gm.Rates(Rarity.Rare)));
-        rare = EditorGUILayout.IntField("Rare", (gm.Rates(Rarity.Rare) - gm.Rates(Rarity.Legend)));
-        Legend = EditorGUILayout.IntField("Legend", gm.Rates(Rarity.Legend));
+        return reward[rnd];
     }
 }

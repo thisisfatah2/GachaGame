@@ -15,4 +15,8 @@ MonoBehaviour:
   characterImg: {fileID: 21300000, guid: db1fe63b09c813942a3d08d362b0f24b, type: 3}
   cardImg: {fileID: 21300000, guid: 7e013add3cd56f24790790bbf63065be, type: 3}
   name: Elsher
+  health: 100
+  attack: 15
+  armor: 50
   rarity: 2
+  cardCount: 0

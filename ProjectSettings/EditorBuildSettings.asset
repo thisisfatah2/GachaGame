@@ -6,6 +6,18 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/Main.unity
+    path: Assets/Scenes/Menu.unity
+    guid: 67a97873887ed2248bfa617fc3218bba
+  - enabled: 1
+    path: Assets/Scenes/CardMenu.unity
+    guid: b7e9b65fc7d608c4c9079297c359a9ae
+  - enabled: 1
+    path: Assets/Scenes/GuaranteedGacha.unity
     guid: 2cda990e2423bbf4892e6590ba056729
+  - enabled: 1
+    path: Assets/Scenes/PityGacha.unity
+    guid: 3df34f39ddb6e3045be42321dc127eb3
+  - enabled: 1
+    path: Assets/Scenes/RateUpGacha.unity
+    guid: 2a0cfde968e477243bd997f35ce59a99
   m_configObjects: {}

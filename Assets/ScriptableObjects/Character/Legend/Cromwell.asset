@@ -15,4 +15,8 @@ MonoBehaviour:
   characterImg: {fileID: 21300000, guid: 117b3f374fb52c14288a2f14fa5e8280, type: 3}
   cardImg: {fileID: 21300000, guid: af0d3d029e2431c42a2fcf82f280c20e, type: 3}
   name: Cromwell
+  health: 250
+  attack: 50
+  armor: 75
   rarity: 0
+  cardCount: 0

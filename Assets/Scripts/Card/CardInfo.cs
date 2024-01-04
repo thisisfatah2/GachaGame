@@ -9,6 +9,11 @@ public class CardInfo : ScriptableObject
     public Sprite cardImg;
 
     public new string name;
+    public int health;
+    public int attack;
+    public int armor;
 
     public Rarity rarity;
+
+    public int cardCount;
 }
